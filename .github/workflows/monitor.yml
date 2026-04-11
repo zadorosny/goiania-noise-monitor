@@ -1,0 +1,39 @@
+name: Ticket Monitor
+
+on:
+  schedule:
+    - cron: "*/15 8-23 * * *"    # every 15 min, 08h-23h UTC (05h-20h BRT)
+    - cron: "0 0-7 * * *"        # every 60 min, 00h-07h UTC (21h-04h BRT)
+  workflow_dispatch:              # manual trigger
+
+concurrency:
+  group: monitor
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v3
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Install Playwright browser
+        run: uv run playwright install chromium --with-deps
+
+      - name: Run monitor
+        run: uv run python -m src.main
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+
+      - name: Commit state
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git diff --quiet state.json || (git add state.json && git commit -m "state: update [skip ci]" && git push)
