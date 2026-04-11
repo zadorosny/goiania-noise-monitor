@@ -33,12 +33,32 @@ def _count_matches(text: str, terms: list[str], max_count: int) -> int:
     return count
 
 
+_STATIC_ASSET_EXTENSIONS = (
+    ".css", ".js", ".png", ".jpg", ".jpeg", ".gif", ".svg", ".ico",
+    ".woff", ".woff2", ".ttf", ".eot", ".map", ".webp", ".avif",
+)
+
+_STATIC_PATH_SEGMENTS = ("/_next/", "/static/", "/assets/", "/dist/", "/build/")
+
+
+def _is_static_asset(url: str) -> bool:
+    """Return True if URL looks like a static asset, not a ticket page."""
+    lower = url.lower().split("?")[0]  # ignore query params
+    if any(lower.endswith(ext) for ext in _STATIC_ASSET_EXTENSIONS):
+        return True
+    if any(seg in lower for seg in _STATIC_PATH_SEGMENTS):
+        return True
+    return False
+
+
 def _find_ticket_links(links: list[str]) -> list[str]:
-    """Return links pointing to known ticketing domains."""
+    """Return links pointing to known ticketing domains (excluding static assets)."""
     found: list[str] = []
     seen_domains: set[str] = set()
     for link in links:
         link_lower = link.lower()
+        if _is_static_asset(link_lower):
+            continue
         for domain in TICKETING_DOMAINS:
             if domain in link_lower and domain not in seen_domains:
                 found.append(link)

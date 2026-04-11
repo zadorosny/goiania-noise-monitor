@@ -11,7 +11,7 @@ INSTAGRAM_URL = "https://www.instagram.com/goianianoisefestival/"
 
 SYMPLA_SEARCH_URL = "https://www.sympla.com.br/eventos?s=goiania+noise+festival"
 
-BILHETERIA_SEARCH_URL = "https://www.bilheteriadigital.com/pesquisa?q=goiania+noise"
+BILHETERIA_SEARCH_URL = "https://www.bilheteriadigital.com/busca/goiania%20noise/as/1"
 
 EVENTIM_SEARCH_URL = "https://www.eventim.com.br/search/?affiliate=BDG&searchterm=goiania+noise"
 
@@ -113,4 +113,4 @@ USER_AGENT = (
 
 # --- Timeouts ---
 PLAYWRIGHT_TIMEOUT_MS = 25_000
-HTTPX_TIMEOUT_SECONDS = 15
+HTTPX_TIMEOUT_SECONDS = 30
