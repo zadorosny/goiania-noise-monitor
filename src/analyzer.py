@@ -40,6 +40,13 @@ _STATIC_ASSET_EXTENSIONS = (
 
 _STATIC_PATH_SEGMENTS = ("/_next/", "/static/", "/assets/", "/dist/", "/build/")
 
+# Navigation/search pages on ticketing platforms — not actual event links
+_TICKETING_NAV_PATTERNS = (
+    "/eventos?", "/eventos/", "/busca", "/pesquisa", "/search",
+    "/categorias", "/cidades", "/ajuda", "/faq", "/sobre",
+    "/termos", "/privacidade", "/contato", "/login", "/cadastro",
+)
+
 
 def _is_static_asset(url: str) -> bool:
     """Return True if URL looks like a static asset, not a ticket page."""
@@ -51,13 +58,26 @@ def _is_static_asset(url: str) -> bool:
     return False
 
 
+def _is_ticketing_nav_page(url: str) -> bool:
+    """Return True if URL is a navigation/search page on a ticketing site, not an event."""
+    lower = url.lower()
+    if any(pat in lower for pat in _TICKETING_NAV_PATTERNS):
+        return True
+    # Bare domain root (e.g. https://sympla.com.br/ or https://sympla.com.br)
+    from urllib.parse import urlparse
+    parsed = urlparse(lower)
+    if parsed.path in ("", "/"):
+        return True
+    return False
+
+
 def _find_ticket_links(links: list[str]) -> list[str]:
-    """Return links pointing to known ticketing domains (excluding static assets)."""
+    """Return links pointing to known ticketing domains (excluding static assets and nav pages)."""
     found: list[str] = []
     seen_domains: set[str] = set()
     for link in links:
         link_lower = link.lower()
-        if _is_static_asset(link_lower):
+        if _is_static_asset(link_lower) or _is_ticketing_nav_page(link_lower):
             continue
         for domain in TICKETING_DOMAINS:
             if domain in link_lower and domain not in seen_domains:
