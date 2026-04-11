@@ -19,8 +19,12 @@ jobs:
       - uses: actions/checkout@v4
 
       - uses: astral-sh/setup-uv@v3
+
+      - name: Cache Python venv
+        uses: actions/cache@v4
         with:
-          enable-cache: true
+          path: .venv
+          key: venv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
 
       - name: Install dependencies
         run: uv sync --frozen
