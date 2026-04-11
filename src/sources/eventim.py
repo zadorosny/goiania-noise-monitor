@@ -64,7 +64,7 @@ class EventimSource(Source):
             SourceResult(
                 source_name=self.name,
                 text=card_text,
-                links=links,
+                links=[],
                 raw_html=html,
             )
         ]

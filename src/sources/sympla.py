@@ -89,11 +89,13 @@ class SymplaSource(Source):
                 )
             ]
 
+        # Don't return self-referential links — ticket link detection
+        # is only useful for sources that point TO ticketing platforms.
         return [
             SourceResult(
                 source_name=self.name,
                 text=card_text,
-                links=links,
+                links=[],
                 raw_html=html,
             )
         ]
