@@ -26,11 +26,11 @@ class WixSiteSource(Source):
                     try:
                         await page.goto(
                             url,
-                            wait_until="networkidle",
+                            wait_until="domcontentloaded",
                             timeout=PLAYWRIGHT_TIMEOUT_MS,
                         )
-                        # Extra wait for Wix post-hydration
-                        await page.wait_for_timeout(2000)
+                        # Wait for Wix client-side hydration
+                        await page.wait_for_timeout(5000)
 
                         html = await page.content()
                         text = (await page.inner_text("body")).lower()

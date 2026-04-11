@@ -12,7 +12,6 @@ from .models import CheckResult
 from .sources.base import Source
 from .sources.bilheteria import BilheteriaSource
 from .sources.google_search import GoogleSearchSource
-from .sources.linktree import LinktreeSource
 from .sources.sympla import SymplaSource
 from .sources.wix_site import WixSiteSource
 from .state import compute_fingerprint, load_state, save_state, should_heartbeat
@@ -28,7 +27,6 @@ logger = logging.getLogger(__name__)
 
 def _build_sources() -> list[Source]:
     return [
-        LinktreeSource(),
         WixSiteSource(),
         BilheteriaSource(),
         SymplaSource(),

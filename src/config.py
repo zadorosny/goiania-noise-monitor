@@ -4,10 +4,7 @@
 WIX_URLS = [
     "https://www.goianianoisefestival.com.br",
     "https://www.goianianoisefestival.com.br/order-online",
-    "https://www.goianianoisefestival.com.br/experiences",
 ]
-
-INSTAGRAM_URL = "https://www.instagram.com/goianianoisefestival/"
 
 SYMPLA_SEARCH_URL = "https://www.sympla.com.br/eventos?s=goiania+noise+festival"
 
@@ -110,5 +107,5 @@ USER_AGENT = (
 )
 
 # --- Timeouts ---
-PLAYWRIGHT_TIMEOUT_MS = 25_000
+PLAYWRIGHT_TIMEOUT_MS = 15_000
 HTTPX_TIMEOUT_SECONDS = 30
