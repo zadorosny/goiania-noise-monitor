@@ -1,4 +1,4 @@
-# Goiânia Noise Ticket Monitor
+# Goiânia Noise Ticket Monitor <!-- v1 -->
 
 Monitor automatizado de disponibilidade de ingressos do **31º Goiânia Noise Festival** (7–10 maio 2026). Roda como cron no GitHub Actions e notifica via Telegram.
 
