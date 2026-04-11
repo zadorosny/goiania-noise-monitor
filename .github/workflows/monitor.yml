@@ -1,6 +1,8 @@
 name: Ticket Monitor
 
 on:
+  push:
+    branches: [master]
   schedule:
     - cron: "*/15 8-23 * * *"    # every 15 min, 08h-23h UTC (05h-20h BRT)
     - cron: "0 0-7 * * *"        # every 60 min, 00h-07h UTC (21h-04h BRT)
