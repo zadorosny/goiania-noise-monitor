@@ -7,7 +7,7 @@ import logging
 import sys
 
 from .analyzer import analyze
-from .config import HEARTBEAT_INTERVAL_SECONDS
+from .config import HEARTBEAT_HOURS_BRT
 from .models import CheckResult
 from .sources.base import Source
 from .sources.bilheteria import BilheteriaSource
@@ -85,7 +85,7 @@ async def run_cycle() -> None:
         state["last_alert_fingerprint"] = fingerprint
 
     # Send heartbeat if enough time elapsed
-    if should_heartbeat(state, HEARTBEAT_INTERVAL_SECONDS):
+    if should_heartbeat(state, HEARTBEAT_HOURS_BRT):
         logger.info("Sending heartbeat")
         await send_heartbeat()
         from datetime import datetime, timezone

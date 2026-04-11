@@ -57,14 +57,22 @@ def compute_fingerprint(detections: list[Detection]) -> str:
     return hashlib.md5(payload.encode()).hexdigest()
 
 
-def should_heartbeat(state: dict[str, Any], interval_seconds: int) -> bool:
-    """Return True if enough time has passed since the last heartbeat."""
+def should_heartbeat(state: dict[str, Any], heartbeat_hours: list[int]) -> bool:
+    """Return True if current BRT hour is a heartbeat hour and one hasn't been sent this hour."""
+    from datetime import timedelta
+
+    brt = timezone(timedelta(hours=-3))
+    now_brt = datetime.now(brt)
+
+    if now_brt.hour not in heartbeat_hours:
+        return False
+
     raw = state.get("last_heartbeat")
     if not raw:
         return True
     try:
-        last = datetime.fromisoformat(raw)
-        elapsed = (datetime.now(timezone.utc) - last).total_seconds()
-        return elapsed >= interval_seconds
+        last = datetime.fromisoformat(raw).astimezone(brt)
+        # Already sent during this same hour today
+        return not (last.date() == now_brt.date() and last.hour == now_brt.hour)
     except (ValueError, TypeError):
         return True

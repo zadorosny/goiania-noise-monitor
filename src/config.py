@@ -97,8 +97,8 @@ SOLD_OUT_MIN_TERMS = 2
 CONFIDENCE_HIGH = 50
 CONFIDENCE_MEDIUM = 25
 
-# --- Heartbeat interval (seconds) ---
-HEARTBEAT_INTERVAL_SECONDS = 12 * 60 * 60  # 12 hours
+# --- Heartbeat schedule (Brasília/UTC-3 hours) ---
+HEARTBEAT_HOURS_BRT = [9, 14, 18, 21]
 
 # --- User agent ---
 USER_AGENT = (
