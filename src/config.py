@@ -13,8 +13,6 @@ SYMPLA_SEARCH_URL = "https://www.sympla.com.br/eventos?s=goiania+noise+festival"
 
 BILHETERIA_SEARCH_URL = "https://www.bilheteriadigital.com/busca/goiania%20noise/as/1"
 
-EVENTIM_SEARCH_URL = "https://www.eventim.com.br/search/?affiliate=BDG&searchterm=goiania+noise"
-
 DUCKDUCKGO_URL = (
     "https://html.duckduckgo.com/html/"
     "?q=site%3Abilheteriadigital.com+OR+site%3Asympla.com.br+%22goi%C3%A2nia+noise%22+2026"

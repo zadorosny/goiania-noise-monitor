@@ -11,7 +11,6 @@ from .config import HEARTBEAT_INTERVAL_SECONDS
 from .models import CheckResult
 from .sources.base import Source
 from .sources.bilheteria import BilheteriaSource
-from .sources.eventim import EventimSource
 from .sources.google_search import GoogleSearchSource
 from .sources.linktree import LinktreeSource
 from .sources.sympla import SymplaSource
@@ -33,7 +32,6 @@ def _build_sources() -> list[Source]:
         WixSiteSource(),
         BilheteriaSource(),
         SymplaSource(),
-        EventimSource(),
         GoogleSearchSource(),
     ]
 

@@ -32,13 +32,9 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('uv.lock') }}
 
-      - name: Install Playwright browser
+      - name: Install Playwright browser and deps
         if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: uv run playwright install chromium --with-deps
-
-      - name: Install Playwright deps only
-        if: steps.playwright-cache.outputs.cache-hit == 'true'
-        run: uv run playwright install-deps chromium
 
       - name: Run monitor
         run: uv run python -m src.main
