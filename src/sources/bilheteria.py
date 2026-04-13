@@ -1,73 +1,63 @@
-"""Source: Bilheteria Digital search (httpx, no JS needed)."""
+"""Source: Bilheteria Digital search (httpx + selectolax, no JS)."""
 
 from __future__ import annotations
 
 import logging
-import re
 
-import httpx
+from selectolax.parser import HTMLParser
 
-from ..config import BILHETERIA_SEARCH_URL, HTTPX_TIMEOUT_SECONDS, USER_AGENT
+from ..config import BILHETERIA_SEARCH_URL
+from ._http import get_with_retry
 from .base import Source, SourceResult
 
 logger = logging.getLogger(__name__)
 
-
-def _extract_card_text(html: str) -> str:
-    """Extract text from event cards, not header/footer."""
-    # Bilheteria Digital uses cards with specific class patterns
-    for pattern in [
-        r'class="[^"]*card-event[^"]*"[^>]*>(.*?)</(?:div|a|article)>',
-        r'class="[^"]*search-result[^"]*"[^>]*>(.*?)</(?:div|section)>',
-        r'class="[^"]*evento[^"]*"[^>]*>(.*?)</(?:div|a|article)>',
-        r'class="[^"]*result[^"]*"[^>]*>(.*?)</(?:div|a|article)>',
-    ]:
-        matches = re.findall(pattern, html, re.IGNORECASE | re.DOTALL)
-        if matches:
-            return " ".join(matches).lower()
-
-    # Fallback: strip tags
-    text = re.sub(r"<[^>]+>", " ", html)
-    return text.lower()
+_CARD_SELECTORS = (
+    "[class*='card-event']",
+    "[class*='event-card']",
+    "[class*='search-result']",
+    "[class*='evento']",
+    "[class*='result']",
+    "article",
+)
 
 
-def _extract_links(html: str) -> list[str]:
-    return re.findall(r'href="(https?://[^"]+)"', html, re.IGNORECASE)
+def _extract_cards_text(tree: HTMLParser) -> tuple[str, bool]:
+    """Return (lowered_text, selectors_matched).
+
+    `selectors_matched` is False only when *none* of the card selectors
+    produced a single node — a signal that the page layout changed and the
+    parser is blind, which is distinct from "cards exist, but contain no
+    matching event".
+    """
+    for selector in _CARD_SELECTORS:
+        nodes = tree.css(selector)
+        if nodes:
+            chunks = [n.text(separator=" ", strip=True) for n in nodes]
+            joined = " ".join(c for c in chunks if c).lower()
+            return joined, True
+    return "", False
 
 
 class BilheteriaSource(Source):
     name = "bilheteria_digital"
 
     async def fetch(self) -> list[SourceResult]:
-        async with httpx.AsyncClient(
-            headers={"User-Agent": USER_AGENT},
-            timeout=HTTPX_TIMEOUT_SECONDS,
-            follow_redirects=True,
-        ) as client:
-            resp = await client.get(BILHETERIA_SEARCH_URL)
-            resp.raise_for_status()
-            html = resp.text
+        resp = await get_with_retry(BILHETERIA_SEARCH_URL)
+        resp.raise_for_status()
+        html = resp.text
 
-        card_text = _extract_card_text(html)
-        links = _extract_links(html)
+        tree = HTMLParser(html)
+        card_text, matched = _extract_cards_text(tree)
+
+        if not matched:
+            msg = "no card selectors matched — Bilheteria markup may have changed"
+            logger.warning("bilheteria_digital: %s", msg)
+            return [SourceResult(source_name=self.name, text="", links=[], error=msg)]
 
         noise_in_cards = "goiânia noise" in card_text or "goiania noise" in card_text
         if not noise_in_cards:
             logger.info("Bilheteria Digital: no 'goiânia noise' found in result cards")
-            return [
-                SourceResult(
-                    source_name=self.name,
-                    text="",
-                    links=[],
-                    raw_html=html,
-                )
-            ]
+            return [SourceResult(source_name=self.name, text="", links=[])]
 
-        return [
-            SourceResult(
-                source_name=self.name,
-                text=card_text,
-                links=[],
-                raw_html=html,
-            )
-        ]
+        return [SourceResult(source_name=self.name, text=card_text, links=[])]

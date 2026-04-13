@@ -1,101 +1,69 @@
-"""Source: Sympla event search (httpx, no JS needed)."""
+"""Source: Sympla event search (httpx + selectolax, no JS)."""
 
 from __future__ import annotations
 
 import logging
 
-import httpx
-from ..config import HTTPX_TIMEOUT_SECONDS, SYMPLA_SEARCH_URL, USER_AGENT
+from selectolax.parser import HTMLParser
+
+from ..config import SYMPLA_SEARCH_URL
+from ._http import get_with_retry
 from .base import Source, SourceResult
 
 logger = logging.getLogger(__name__)
 
-# CSS-like pattern: Sympla wraps each event card in an <a> with class containing
-# "sympla-card" or similar.  We extract text only from result cards, not the
-# entire page, to avoid false positives from header/footer.
-_CARD_MARKER = "sympla-card"
+# Cards on Sympla search carry class hooks like "sympla-card", "EventCard"
+# or nest inside search-results containers. CSS selectors are more stable
+# against attribute-order and whitespace changes than regex.
+_CARD_SELECTORS = (
+    "[class*='sympla-card']",
+    "[class*='EventCard']",
+    "[class*='event-card']",
+    "[class*='search-result']",
+    "[class*='event-list'] article",
+    "[class*='event-list'] a",
+)
 
 
-def _extract_card_text(html: str) -> str:
-    """Extract text content likely belonging to event result cards.
+def _extract_cards_text(tree: HTMLParser) -> tuple[str, bool]:
+    """Return (lowered_text, selectors_matched).
 
-    Falls back to full body text if no card markers are found.
+    `selectors_matched` is False only when *none* of the card selectors
+    produced nodes — signal that Sympla's markup changed and the parser
+    is blind, which is distinct from "found cards, none about this event".
     """
-    lower = html.lower()
-    # Check for card markers in the HTML
-    if _CARD_MARKER in lower:
-        # Grab chunks around card markers (rough but effective)
-        import re
-
-        cards = re.findall(
-            r'class="[^"]*sympla-card[^"]*"[^>]*>(.*?)</(?:a|div|article)>',
-            html,
-            re.IGNORECASE | re.DOTALL,
-        )
-        if cards:
-            return " ".join(cards).lower()
-
-    # Also check for event-list or search-results containers
-    import re
-
-    # Generic result container patterns
-    for pattern in [
-        r'class="[^"]*search-result[^"]*"[^>]*>(.*?)</(?:div|section)>',
-        r'class="[^"]*event-card[^"]*"[^>]*>(.*?)</(?:div|a|article)>',
-        r'class="[^"]*event-list[^"]*"[^>]*>(.*?)</(?:div|section)>',
-    ]:
-        matches = re.findall(pattern, html, re.IGNORECASE | re.DOTALL)
-        if matches:
-            return " ".join(matches).lower()
-
-    # Fallback: return all text but flag it
-    import re as _re
-
-    text = _re.sub(r"<[^>]+>", " ", html)
-    return text.lower()
-
-
-def _extract_links(html: str) -> list[str]:
-    import re
-    return re.findall(r'href="(https?://[^"]+)"', html, re.IGNORECASE)
+    for selector in _CARD_SELECTORS:
+        nodes = tree.css(selector)
+        if nodes:
+            chunks = [n.text(separator=" ", strip=True) for n in nodes]
+            joined = " ".join(c for c in chunks if c).lower()
+            return joined, True
+    return "", False
 
 
 class SymplaSource(Source):
     name = "sympla"
 
     async def fetch(self) -> list[SourceResult]:
-        async with httpx.AsyncClient(
-            headers={"User-Agent": USER_AGENT},
-            timeout=HTTPX_TIMEOUT_SECONDS,
-            follow_redirects=True,
-        ) as client:
-            resp = await client.get(SYMPLA_SEARCH_URL)
-            resp.raise_for_status()
-            html = resp.text
+        resp = await get_with_retry(SYMPLA_SEARCH_URL)
+        resp.raise_for_status()
+        html = resp.text
 
-        card_text = _extract_card_text(html)
-        links = _extract_links(html)
+        tree = HTMLParser(html)
+        card_text, matched = _extract_cards_text(tree)
 
-        # Only include if "goiânia noise" or "goiania noise" appears in card text
+        if not matched:
+            msg = "no card selectors matched — Sympla markup may have changed"
+            logger.warning("sympla: %s", msg)
+            return [SourceResult(source_name=self.name, text="", links=[], error=msg)]
+
+        # Only score when "goiânia noise" actually appears in card text —
+        # avoids false positives from menu/footer/SEO copy outside cards.
         noise_in_cards = "goiânia noise" in card_text or "goiania noise" in card_text
         if not noise_in_cards:
             logger.info("Sympla: no 'goiânia noise' found in result cards")
-            return [
-                SourceResult(
-                    source_name=self.name,
-                    text="",
-                    links=[],
-                    raw_html=html,
-                )
-            ]
+            return [SourceResult(source_name=self.name, text="", links=[])]
 
-        # Don't return self-referential links — ticket link detection
-        # is only useful for sources that point TO ticketing platforms.
-        return [
-            SourceResult(
-                source_name=self.name,
-                text=card_text,
-                links=[],
-                raw_html=html,
-            )
-        ]
+        # Links intentionally empty — Sympla pointing at itself adds no
+        # cross-platform signal; scoring relies on card text.
+        return [SourceResult(source_name=self.name, text=card_text, links=[])]

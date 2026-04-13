@@ -11,12 +11,17 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class SourceResult:
-    """Raw data extracted from a source."""
+    """Raw data extracted from a source.
+
+    `error` is set when the source fetched OK but produced no usable content
+    (e.g. card selectors matched nothing — markup likely changed). It is
+    collected into CheckResult.errors without breaking the cycle.
+    """
 
     source_name: str
     text: str  # visible text, lowered
     links: list[str]  # all hrefs found
-    raw_html: str = ""
+    error: str | None = None
 
 
 class Source(abc.ABC):

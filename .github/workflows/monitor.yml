@@ -53,9 +53,29 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
 
       - name: Commit state
         run: |
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git diff --quiet state.json || (git add state.json && git commit -m "state: update [skip ci]" && git pull --rebase && git push)
+          # Stage any changed/untracked files among the observability artifacts.
+          git add -N check_log.jsonl 2>/dev/null || true
+          if git diff --quiet state.json check_log.jsonl; then
+            echo "state and log unchanged, nothing to commit."
+            exit 0
+          fi
+          git add state.json check_log.jsonl
+          git commit -m "state: update [skip ci]"
+          # Retry with rebase to survive concurrent state commits.
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin "${GITHUB_REF_NAME}" && git push origin "HEAD:${GITHUB_REF_NAME}"; then
+              echo "state push succeeded on attempt ${attempt}"
+              exit 0
+            fi
+            echo "state push attempt ${attempt} failed, retrying in $((attempt * 3))s"
+            sleep $((attempt * 3))
+          done
+          echo "state push permanently failed after 5 attempts" >&2
+          exit 1

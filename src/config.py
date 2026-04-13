@@ -24,7 +24,18 @@ TICKETING_DOMAINS = [
     "uhuu.com",
     "ingresse.com",
     "lets.events",
+    "shotgun.live",
+    "queroingresso.com.br",
+    "megabilheteria.com",
+    "ingressos.com.br",
 ]
+
+# Sources whose text is already festival-specific by domain — skip the
+# target-event guard in analyze(). Everything else must mention the festival
+# name to be scored, or a news article about a past edition or a
+# similarly-named event can build up a score from stray terms.
+TRUSTED_SOURCE_PREFIXES = ("wix_site", "instagram")
+TARGET_EVENT_TERMS = ("goiânia noise", "goiania noise")
 
 # --- Scoring terms ---
 HIGH_CONFIDENCE_TERMS = [
@@ -51,6 +62,11 @@ HIGH_CONFIDENCE_TERMS = [
     "pre-venda",
     "comprar agora",
     "compre agora",
+    "ingressos liberados",
+    "ingressos já disponíveis",
+    "ingressos ja disponiveis",
+    "garanta o seu",
+    "compre o seu",
 ]
 
 SUPPORT_TERMS = [
@@ -89,7 +105,9 @@ HIGH_TERM_MAX_CONTRIBUTIONS = 4
 SUPPORT_TERM_SCORE = 3
 SUPPORT_TERM_MAX_CONTRIBUTIONS = 5
 TICKET_LINK_SCORE = 20
-TICKET_LINK_MAX_CONTRIBUTIONS = 2
+TICKET_LINK_MAX_CONTRIBUTIONS = 2  # scoring cap — distinct domains
+MAX_LINKS_PER_DOMAIN = 2  # display cap — URLs shown per domain
+MAX_TOTAL_TICKET_LINKS = 6  # display cap — total URLs returned per detection
 SOLD_OUT_PENALTY = 30
 SOLD_OUT_MIN_TERMS = 2
 
@@ -102,10 +120,34 @@ HEARTBEAT_HOURS_BRT = [9, 14, 18, 21]
 
 # --- User agent ---
 USER_AGENT = (
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-    "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 )
 
 # --- Timeouts ---
 PLAYWRIGHT_TIMEOUT_MS = 15_000
+PLAYWRIGHT_HYDRATION_TIMEOUT_MS = 8_000  # max wait for networkidle after DOM load
+PLAYWRIGHT_MIN_HYDRATION_MS = 1_500  # floor — always wait at least this for late scripts
 HTTPX_TIMEOUT_SECONDS = 30
+
+# --- Retry / resilience ---
+TELEGRAM_RETRY_ATTEMPTS = 4
+TELEGRAM_RETRY_BASE_DELAY = 1.5  # seconds, exponential
+
+HTTPX_RETRY_ATTEMPTS = 3
+HTTPX_RETRY_BASE_DELAY = 1.0  # seconds, quadratic (1s, 4s, 9s)
+
+# --- Instagram source ---
+INSTAGRAM_HANDLE = "goianianoisefestival"
+INSTAGRAM_POSTS_LIMIT = 12  # last N posts to fetch
+INSTAGRAM_POST_MAX_AGE_DAYS = 14  # drop anything older
+APIFY_INSTAGRAM_ACTOR = "apify~instagram-scraper"
+APIFY_SYNC_TIMEOUT_SECONDS = 180.0  # run-sync-get-dataset-items can take ~60-90s
+
+# --- Observability ---
+CHECK_LOG_PATH_NAME = "check_log.jsonl"
+CHECK_LOG_MAX_LINES = 2000  # rotate oldest entries past this
+
+# Consecutive empty cycles before resetting last_alert_fingerprint.
+# Prevents re-alerting on transient scraper hiccups but still realerts
+# if tickets reopen after a real dry spell.
+EMPTY_CYCLES_RESET_THRESHOLD = 4
