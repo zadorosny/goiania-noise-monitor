@@ -101,9 +101,10 @@ async def test_source_safe_fetch_swallows_errors():
 
 @pytest.mark.asyncio
 @respx.mock
-async def test_sympla_emits_error_when_selectors_match_nothing():
-    # No card-ish classes anywhere — parser should surface an error so the
-    # cycle can distinguish "markup broke" from "cards contained no match".
+async def test_sympla_emits_error_when_payload_missing():
+    # No `searchEventsResult` payload anywhere — parser should surface an
+    # error so we can distinguish "markup broke" from "search returned zero
+    # Goiânia Noise events" (which is a legitimate empty result).
     empty_html = "<html><body><div>just a plain page</div></body></html>"
     respx.get(SYMPLA_SEARCH_URL).mock(return_value=httpx.Response(200, text=empty_html))
     results = await SymplaSource().fetch()
